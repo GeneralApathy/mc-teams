@@ -1,0 +1,9 @@
+name: Teams
+author: macca_ferri
+main: com.emilianomaccaferri.teams.Teams
+version: 1.0
+
+commands:
+  teams:
+    description: Ottieni comandi per i teams
+    aliases: [ts, te, tms]
