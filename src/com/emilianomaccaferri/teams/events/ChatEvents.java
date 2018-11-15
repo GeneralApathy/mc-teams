@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,7 +28,15 @@ public class ChatEvents implements Listener {
 		
 		Player player = e.getPlayer();
 		
-		Teams.getInvitationsByUsername(player.getName());
+		if(Teams.getInvitationsByUsername(player.getName()) == null)
+			return;
+		
+		Teams.getInvitationsByUsername(player.getName())
+		.forEach(item -> {
+			
+			player.sendMessage(ChatColor.YELLOW + "" + ChatColor.BOLD + "[Teams] " + ChatColor.RESET + "" + ChatColor.WHITE+"Hai ricevuto un invito da parte del team: " + ChatColor.RESET + "" + ChatColor.GREEN + item);
+			
+		});
 		
 	}
 	

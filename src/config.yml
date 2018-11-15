@@ -1,7 +1,7 @@
 # MySQL configuration
 
 mysql-username: 'username'
-mysql-password: '***'
+mysql-password: '****'
 mysql-database: 'database'
 
 # Chat configuration

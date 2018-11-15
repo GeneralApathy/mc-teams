@@ -28,29 +28,69 @@ public class Teams extends JavaPlugin {
     public static List<Map<String, Object>> teams, members, invitations;
     public static Connection db;
     
-    public static void getInvitationsByUsername(String username){
+    public static String getTeamIdByItsName(String teamName) {
     	
-    	Stream<Map<String, Object>> stream = invitations
-    	    	.parallelStream()
-    	    	.filter(user -> user.get("username").equals(username));
+    	Optional<Map<String, Object>> a = teams
+    	.parallelStream()
+    	.filter(item -> item.get("team_name").equals(teamName))
+    	.findFirst();
     	
-    	ArrayList<String> results = new ArrayList<String>();
-    	
-    	Optional<Map<String, Object>> invits = stream.findAny();
-    	
-    	if(invits.isPresent()) {
-    		
-    		invits
-    		.get()
-    		.entrySet()
-    		.forEach(i -> {
-    			
-    			Bukkit.getLogger().info(i.getValue().toString());
-    			
-    		});
-    		
+    	if(a.isPresent()) {
+
+    		return a.get().get("team_id").toString();
     		
     	}
+    	
+    	return null;
+    	
+    }
+    
+    public static ArrayList<String> getInvitationsByUsername(String username){
+    	
+    	ArrayList<String> useful = new ArrayList<String>();
+    	ArrayList<String> team_ids = new ArrayList<String>();
+    	ArrayList<String> team_names = new ArrayList<String>();
+    	
+    	invitations
+    	.forEach(item -> {
+    		
+    		if(item.get("username").equals(username)) {
+    			
+    			String team_id = item.get("team_id").toString();
+    			useful.add(team_id);
+    			
+    		}
+    		
+    	});
+    	
+    	if(useful.size() == 0)
+    		return null;
+    	
+    	Iterator<String> i = useful.iterator();
+    	
+    	Bukkit.getLogger().info(useful.toString());
+    	
+    	while(i.hasNext()) {
+    		
+    		String teamID = i.next();
+    		
+    		if(!team_ids.contains(teamID)) {
+    			
+    			team_ids.add(teamID);
+    			
+    		}
+    		
+    	}
+    	
+    	Iterator<Map<String, Object>> teamIterator = teams.iterator();  
+    	
+    	while(teamIterator.hasNext()) {
+    		
+    		team_names.add(teamIterator.next().get("team_name").toString());
+    		
+    	}
+    	
+    	return team_names;    	
     	
     }
     
@@ -192,13 +232,16 @@ public class Teams extends JavaPlugin {
 		try {
 			
 			db = (Connection) DatabaseUtilities.createConnection(driver, url, username, password);
-			//DatabaseUtilities.update(db, "DELETE FROM Invitations", new ArrayList<Object>());
+			DatabaseUtilities.update(db, "DELETE FROM Invitations", new ArrayList<Object>());
 			teams = DatabaseUtilities.query(db, "SELECT * FROM Teams", new ArrayList<Object>());
 			members = DatabaseUtilities.query(db, "SELECT * FROM Members", new ArrayList<Object>());
 			invitations = DatabaseUtilities.query(db, "SELECT * FROM Invitations", new ArrayList<Object>());
 			
+			Bukkit.getLogger().info(invitations.toString());
+			
 			getLogger().info("Loaded teams: " + teams.toString());
 			getLogger().info("Loaded members: " +members.toString());
+			getLogger().info("Loaded invitations: " +invitations.toString());
 			
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();

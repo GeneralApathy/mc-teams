@@ -15,7 +15,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.emilianomaccaferri.teams.utils.DatabaseUtilities;
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 
 public class Commands implements CommandExecutor {
@@ -47,10 +46,35 @@ public class Commands implements CommandExecutor {
 						ChatColor.YELLOW + "" + ChatColor.BOLD + "== Comandi disponibili == \n " + ChatColor.RESET + ChatColor.GREEN + "- /teams create <nome_team> - Crea un nuovo team\n"+
 						"- /teams join <nome_team> - Entra in un team (solo su invito)\n" + 
 						"- /teams invite <nome_player> - Invita un player nel tuo team\n" + 
-						"- /teams leave <nome_team> - Esci dal team specificato\n"
+						"- /teams leave - Esci dal tuo team\n"
 				);
 				
 				return true;
+				
+			}
+			
+			if(args[0].equalsIgnoreCase("leave")) {
+				
+				if(!Teams.playerHasTeam(player.getUniqueId().toString())) {
+					
+					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.YELLOW + "Non sei in alcun team, da dove cazzo te ne vai");
+					return true;
+					
+				}
+				
+				ArrayList<Object> pl = new ArrayList<Object>();
+				pl.add(player.getUniqueId().toString());
+				try {
+					DatabaseUtilities.update(Teams.db, "DELETE FROM Members WHERE uuid = ?", pl);
+					Teams.refreshMembers();
+					
+					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.GREEN + "Sei uscito dal tuo team. Ciao!");
+					
+					return true;
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				
 			}
 			
@@ -58,12 +82,54 @@ public class Commands implements CommandExecutor {
 				
 				if(args.length == 1) {
 					
-					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.GREEN + " /teams join <nome_team> - Entra nel team specificato (solo su invito)");
+					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.GREEN + "/teams join <nome_team> - Entra nel team specificato (solo su invito)");
 					return true;
 					
 				}	
 				
+				if(Teams.playerHasTeam(player.getUniqueId().toString())) {
+					
+					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.YELLOW + "Fai già parte di un team, esci da quello prima di joinare in un nuovo team");
+					return true;
+					
+				}
 				
+				if(Teams.getInvitationsByUsername(player.getName()) == null) {
+					
+					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.YELLOW + "Non c'è nessun invito per te, mi dispiace :(");
+					return true;
+					
+				}
+				
+				if(Teams.getInvitationsByUsername(player.getName()).contains(args[1])) {
+					
+					try {
+						
+						Bukkit.getLogger().info("ID: " + Teams.getTeamIdByItsName(args[1]));
+						
+						addPlayerToTeam(player.getUniqueId().toString(), player.getName(), Teams.getTeamIdByItsName(args[1]));
+						ArrayList<Object> p = new ArrayList<Object>();
+						
+						p.add(player.getName());
+						DatabaseUtilities.update(Teams.db, "DELETE FROM Invitations WHERE username = ?", p);
+						Teams.refreshInvitations();
+						Teams.refreshMembers();
+						Teams.refreshMembers();
+						
+						player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.YELLOW + "Sei entrato nel team " + ChatColor.GREEN + args[1]);
+						return true;
+						
+					} catch (SQLException e) {
+						
+						e.printStackTrace();
+					}
+					
+				}else {
+					
+					player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.YELLOW + "Non sei stato invitato dal team " + ChatColor.GREEN + args[1]);
+					return true;
+					
+				}
 				
 			}
 			
@@ -166,23 +232,19 @@ public class Commands implements CommandExecutor {
 					try {
 						
 						if(Teams.playerHasTeam(player.getUniqueId().toString())) {
+							
 							player.sendMessage("[Teams] " + ChatColor.RESET + ChatColor.RED + "Fai già parte di un team, pertanto non ne puoi creare un altro.");
 							return true;
+							
 						}
 						
 						String team_id = RandomStringUtils.random(128, false, true);
-						String userid = RandomStringUtils.random(64, false, true);
 						ArrayList<Object> tt = new ArrayList<Object>();
-						ArrayList<Object> member = new ArrayList<Object>();
 						tt.add(args[1]);
 						tt.add(team_id);
-						member.add(player.getUniqueId().toString());
-						member.add(player.getName());
-						member.add(userid);
-						member.add(team_id);
 						
 						DatabaseUtilities.update(Teams.db, "INSERT INTO Teams (team_name, team_id) VALUES(?,?)", tt);
-						DatabaseUtilities.update(Teams.db, "INSERT INTO Members (uuid, username, userid, team_id) VALUES(?,?,?,?)", member);
+						addPlayerToTeam(player.getUniqueId().toString(), player.getName(), team_id);
 						
 						Teams.refreshTeams();
 						Teams.refreshMembers();
@@ -204,6 +266,20 @@ public class Commands implements CommandExecutor {
 		}
 		
 		return true;
+		
+	}
+	
+	public void addPlayerToTeam(String uuid, String playerName, String team_id) throws SQLException {
+		
+		String userid = RandomStringUtils.random(64, false, true);
+		ArrayList<Object> member = new ArrayList<Object>();
+		
+		member.add(uuid);
+		member.add(playerName);
+		member.add(userid);
+		member.add(team_id);
+
+		DatabaseUtilities.update(Teams.db, "INSERT INTO Members (uuid, username, userid, team_id) VALUES(?,?,?,?)", member);
 		
 	}
 	
